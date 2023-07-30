@@ -1,32 +1,40 @@
 using Microsoft.AspNetCore.Mvc;
-using Credentials_checker.Data;
-using Credentials_checker.Models;
+using Newtonsoft.Json.Linq;
 
-namespace Credentials_checker.Controllers
+namespace AccessControlService.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
-    public class YourController : ControllerBase
+    [Route("api/[controller]")]
+    public class AccessController : ControllerBase
     {
-        private readonly DbContext _context;
-
-        public YourController(DbContext context)
+        private static List<User> users = new List<User>
         {
-            _context = context;
-        }
+            new User { Login = "dsfsdf", Password = "sdfsdf" },
+            new User { Login = "admin", Password = "admin" },
+            // Добавьте других пользователей по необходимости
+        };
 
         [HttpPost]
-        public IActionResult CheckAccess([FromBody] User user)
+        public IActionResult CheckAccess([FromBody] JObject credentials)
         {
-            if (user == null || string.IsNullOrWhiteSpace(user.Login) || string.IsNullOrWhiteSpace(user.Password))
+            if (credentials == null || !credentials.ContainsKey("Login") || !credentials.ContainsKey("Password"))
             {
-                return BadRequest("Invalid input.");
+                return BadRequest("Invalid input format.");
             }
 
-            // Поиск пользователя в базе данных по логину и паролю
-            bool access = _context.Users.Any(u => u.Login == user.Login && u.Password == user.Password);
+            string login = credentials["Login"].ToString();
+            string password = credentials["Password"].ToString();
 
-            return Ok(new { access });
+            bool hasUser = users.Any(u => u.Login == login && u.Password == password);
+
+            var response = new { access = hasUser };
+            return Ok(response);
         }
+    }
+
+    public class User
+    {
+        public string Login { get; set; }
+        public string Password { get; set; }
     }
 }
